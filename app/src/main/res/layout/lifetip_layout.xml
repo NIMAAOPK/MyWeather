@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="10dp"
+    android:background="#0D000000"
+    android:orientation="vertical">
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="25dp"
+
+        android:gravity="center_vertical"
+        android:paddingLeft="10dp"
+        android:text="生活指数"
+        android:textColor="#fff"
+        android:textSize="18dp" />
+    <View
+        android:background="#0DFFFFFF"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"/>
+
+    <com.aopk.myweather.view.MyGridView
+        android:paddingBottom="10dp"
+        android:id="@+id/life_grilview"
+        android:numColumns="4"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+</LinearLayout>
