@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">MyWeather</string>
+    <string name="setting">设置</string>
+    <string name="cancel">取消</string>
+    <string name="notifyTitle">警告信息</string>
+    <string name="notifyMsg">权限被拒绝，应用将无法使用</string>
 </resources>

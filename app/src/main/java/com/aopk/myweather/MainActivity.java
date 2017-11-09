@@ -10,6 +10,10 @@ import android.widget.SimpleAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.amap.api.location.AMapLocation;
+import com.amap.api.location.AMapLocationClient;
+import com.amap.api.location.AMapLocationClientOption;
+import com.amap.api.location.AMapLocationListener;
 import com.aopk.myweather.RxFactory.BaseObserver;
 import com.aopk.myweather.RxFactory.RetrofitFactory;
 import com.aopk.myweather.RxFactory.RxSchedulers;
@@ -30,10 +34,10 @@ import java.util.Map;
 
 import io.reactivex.functions.Consumer;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends CheckPermissionsActivity {
     private static final String TAG = "MainActivity";
     private TextView tvPlace, tvUpdateTime, tvTemp, tvType, tvTempRange,
-            tvFengxiang, tvHumidity, tvFire,tvSunrise,tvSunset;
+            tvFengxiang, tvHumidity, tvFire, tvSunrise, tvSunset;
     private MyGridView gvPrediction, gvLifeTip;
     private List<Map<String, Object>> predictionList;
     private List<Map<String, Object>> lifeList;
@@ -43,8 +47,10 @@ public class MainActivity extends AppCompatActivity {
     private String type;
     private String tempRange;
     private boolean isToday = true;
-
     private String city = "北京";
+
+    public AMapLocationClient aMapLocationClient = null;
+    public AMapLocationClientOption aMapLocationOption = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,6 +63,42 @@ public class MainActivity extends AppCompatActivity {
         initView();
         initViewEvent();
         loadData();
+        getLocation();
+    }
+
+    private void getLocation() {
+        aMapLocationClient = new AMapLocationClient(getApplicationContext());
+        aMapLocationClient.setLocationListener(new AMapLocationListener() {
+            @Override
+            public void onLocationChanged(AMapLocation amapLocation) {
+                if (amapLocation != null) {
+                    if (amapLocation.getErrorCode() == 0) {
+                        //可在其中解析amapLocation获取相应内容。
+                        amapLocation.getDistrict();//城区信息
+                        Log.i(TAG, "onLocationChanged: "+city);
+                        aMapLocationClient.stopLocation();
+                        aMapLocationClient.onDestroy();
+                    } else {
+                        //定位失败时，可通过ErrCode（错误码）信息来确定失败的原因，errInfo是错误信息，详见错误码表。
+                        Log.e("AmapError", "location Error, ErrCode:"
+                                + amapLocation.getErrorCode() + ", errInfo:"
+                                + amapLocation.getErrorInfo());
+                        aMapLocationClient.stopLocation();
+                        aMapLocationClient.onDestroy();
+                    }
+                }else{
+                    aMapLocationClient.stopLocation();
+                    aMapLocationClient.onDestroy();
+                }
+            }
+        });
+        aMapLocationOption = new AMapLocationClientOption();
+        aMapLocationOption.setLocationMode(AMapLocationClientOption.AMapLocationMode.Battery_Saving);
+        aMapLocationOption.setOnceLocation(true);
+        aMapLocationOption.setOnceLocationLatest(true);
+        aMapLocationOption.setLocationCacheEnable(true);
+        aMapLocationClient.setLocationOption(aMapLocationOption);
+        aMapLocationClient.startLocation();
     }
 
     private void loadData() {
@@ -79,7 +121,7 @@ public class MainActivity extends AppCompatActivity {
                         tvTemp.setText(baseEntity.getWendu());
                         tvType.setText(type);
                         tvTempRange.setText(tempRange);
-                        tvFengxiang.setText(baseEntity.getFengxiang()+baseEntity.getFengli());
+                        tvFengxiang.setText(baseEntity.getFengxiang() + baseEntity.getFengli());
                         tvHumidity.setText(baseEntity.getShidu());
                         tvFire.setText(rainTip);
                         tvSunrise.setText(baseEntity.getSunrise_1());
@@ -92,7 +134,7 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     protected void onFailure(Throwable e) {
                         Log.i(TAG, "onSuccess: " + e.toString());
-                        Toast.makeText(MainActivity.this,"不好了，出错了",Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity.this, "不好了，出错了", Toast.LENGTH_SHORT).show();
                     }
                 });
     }
@@ -105,12 +147,12 @@ public class MainActivity extends AppCompatActivity {
             Yesterday yesterday = baseEntity.getYesterday();
             Map<String, Object> map1 = new HashMap<>();
             map1.put("day", "昨天");
-            map1.put("temp", yesterday.getDate_1().substring(yesterday.getDate_1().length()-3,yesterday.getDate_1().length()));
+            map1.put("temp", yesterday.getDate_1().substring(yesterday.getDate_1().length() - 3, yesterday.getDate_1().length()));
             Day_1 day_1 = yesterday.getDay_1();
             map1.put("dayTypeImg", switchPic(day_1.getType_1()));
             map1.put("dayType", day_1.getType_1());
-            map1.put("dayTemp", yesterday.getHigh_1().substring(3,yesterday.getHigh_1().length()));
-            map1.put("nightTemp", yesterday.getLow_1().substring(3,yesterday.getLow_1().length()));
+            map1.put("dayTemp", yesterday.getHigh_1().substring(3, yesterday.getHigh_1().length()));
+            map1.put("nightTemp", yesterday.getLow_1().substring(3, yesterday.getLow_1().length()));
             Night_1 night_1 = yesterday.getNight_1();
             map1.put("nightType", night_1.getType_1());
             map1.put("nightTypeImg", switchPic(night_1.getType_1()));
@@ -121,23 +163,23 @@ public class MainActivity extends AppCompatActivity {
             List<Weather> listWeather = baseEntity.getForecast();
             for (Weather weather : listWeather) {
                 Map<String, Object> map = new HashMap<>();
-                map.put("day", weather.getDate().substring(0, weather.getDate().length()-3));
-                map.put("temp", weather.getDate().substring(weather.getDate().length()-3, weather.getDate().length()));
+                map.put("day", weather.getDate().substring(0, weather.getDate().length() - 3));
+                map.put("temp", weather.getDate().substring(weather.getDate().length() - 3, weather.getDate().length()));
                 Day day = weather.getDay();
                 map.put("dayTypeImg", switchPic(day.getType()));
                 map.put("dayType", day.getType());
-                map.put("dayTemp", weather.getHigh().substring(3,weather.getHigh().length()));
-                map.put("nightTemp", weather.getLow().substring(3,weather.getLow().length()));
+                map.put("dayTemp", weather.getHigh().substring(3, weather.getHigh().length()));
+                map.put("nightTemp", weather.getLow().substring(3, weather.getLow().length()));
                 Night night = weather.getNight();
                 map.put("nightType", night.getType());
                 map.put("nightTypeImg", switchPic(night.getType()));
                 map.put("fengxiang", night.getFengxiang());
                 map.put("fengli", night.getFengli());
                 predictionList.add(map);
-                if (isToday){
+                if (isToday) {
                     type = day.getType();
-                    tempRange = weather.getHigh().substring(3,weather.getHigh().length()-1)+"/"
-                            +weather.getLow().substring(3,weather.getLow().length());
+                    tempRange = weather.getHigh().substring(3, weather.getHigh().length() - 1) + "/"
+                            + weather.getLow().substring(3, weather.getLow().length());
                     isToday = false;
                 }
             }
