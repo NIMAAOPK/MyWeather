@@ -3,13 +3,8 @@
  */
 package com.aopk.myweather;
 
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
-
 import android.Manifest;
 import android.annotation.TargetApi;
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -19,6 +14,10 @@ import android.os.Build;
 import android.provider.Settings;
 import android.support.v7.app.AppCompatActivity;
 import android.view.KeyEvent;
+
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 继承了Activity，实现Android6.0的运行时权限检测
@@ -32,6 +31,7 @@ import android.view.KeyEvent;
  * @since 2.5.0
  */
 public class CheckPermissionsActivity extends AppCompatActivity {
+	private PermissionListener listener = null;
 	/**
 	 * 需要进行检测的权限数组
 	 */
@@ -114,6 +114,10 @@ public class CheckPermissionsActivity extends AppCompatActivity {
 		return needRequestPermissonList;
 	}
 
+	protected void setPermissionListener(PermissionListener listener){
+		this.listener = listener;
+	}
+
 	/**
 	 * 检测是否所有的权限都已经授权
 	 * @param grantResults
@@ -126,6 +130,9 @@ public class CheckPermissionsActivity extends AppCompatActivity {
 			if (result != PackageManager.PERMISSION_GRANTED) {
 				return false;
 			}
+		}
+		if (listener != null){
+			listener.onSuccess();
 		}
 		return true;
 	}

@@ -1,11 +1,14 @@
 package com.aopk.myweather;
 
+import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.View;
 import android.view.WindowManager;
+import android.widget.ImageView;
 import android.widget.SimpleAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -33,12 +36,14 @@ import java.util.List;
 import java.util.Map;
 
 import io.reactivex.functions.Consumer;
+import retrofit2.converter.simplexml.SimpleXmlConverterFactory;
 
 public class MainActivity extends CheckPermissionsActivity {
     private static final String TAG = "MainActivity";
     private TextView tvPlace, tvUpdateTime, tvTemp, tvType, tvTempRange,
             tvFengxiang, tvHumidity, tvFire, tvSunrise, tvSunset;
     private MyGridView gvPrediction, gvLifeTip;
+    private ImageView iv_location;
     private List<Map<String, Object>> predictionList;
     private List<Map<String, Object>> lifeList;
     private SimpleAdapter predictionAdapter, lifeAdapter;
@@ -47,7 +52,8 @@ public class MainActivity extends CheckPermissionsActivity {
     private String type;
     private String tempRange;
     private boolean isToday = true;
-    private String city = "北京";
+    private String city = "";
+    private String location = "--";
 
     public AMapLocationClient aMapLocationClient = null;
     public AMapLocationClientOption aMapLocationOption = null;
@@ -59,11 +65,17 @@ public class MainActivity extends CheckPermissionsActivity {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
         }
         setContentView(R.layout.activity_main);
-        getWindow().setBackgroundDrawableResource(R.mipmap.home_bg);
+        //getWindow().setBackgroundDrawableResource(R.mipmap.home_bg);
         initView();
         initViewEvent();
-        loadData();
+        //loadData();
         getLocation();
+        setPermissionListener(new PermissionListener() {
+            @Override
+            public void onSuccess() {
+                getLocation();
+            }
+        });
     }
 
     private void getLocation() {
@@ -74,8 +86,10 @@ public class MainActivity extends CheckPermissionsActivity {
                 if (amapLocation != null) {
                     if (amapLocation.getErrorCode() == 0) {
                         //可在其中解析amapLocation获取相应内容。
-                        amapLocation.getDistrict();//城区信息
-                        Log.i(TAG, "onLocationChanged: "+city);
+                        city = amapLocation.getDistrict();//城区信息
+                        location = amapLocation.getDistrict();//城区信息
+                        loadData(city);
+                        Log.i(TAG, "onLocationChanged: " + city);
                         aMapLocationClient.stopLocation();
                         aMapLocationClient.onDestroy();
                     } else {
@@ -85,8 +99,10 @@ public class MainActivity extends CheckPermissionsActivity {
                                 + amapLocation.getErrorInfo());
                         aMapLocationClient.stopLocation();
                         aMapLocationClient.onDestroy();
+                        if (swipeRefreshLayout.isRefreshing())
+                            swipeRefreshLayout.setRefreshing(false);
                     }
-                }else{
+                } else {
                     aMapLocationClient.stopLocation();
                     aMapLocationClient.onDestroy();
                 }
@@ -101,7 +117,7 @@ public class MainActivity extends CheckPermissionsActivity {
         aMapLocationClient.startLocation();
     }
 
-    private void loadData() {
+    private void loadData(final String city) {
         RetrofitFactory.getInstance().getWeatherInfo(city)
                 .compose(RxSchedulers.<BaseEntity>compose())
                 .doOnNext(new Consumer<BaseEntity>() {
@@ -113,6 +129,7 @@ public class MainActivity extends CheckPermissionsActivity {
                 .subscribe(new BaseObserver<BaseEntity>() {
                     @Override
                     protected void onSuccess(BaseEntity baseEntity) {
+                        //String city1 = city;
                         Log.i(TAG, "onSuccess: " + baseEntity.toString());
                         lifeAdapter.notifyDataSetChanged();
                         predictionAdapter.notifyDataSetChanged();
@@ -133,8 +150,11 @@ public class MainActivity extends CheckPermissionsActivity {
 
                     @Override
                     protected void onFailure(Throwable e) {
-                        Log.i(TAG, "onSuccess: " + e.toString());
-                        Toast.makeText(MainActivity.this, "不好了，出错了", Toast.LENGTH_SHORT).show();
+
+                        tvUpdateTime.setText(R.string.update_fail);
+                        if (swipeRefreshLayout.isRefreshing())
+                            swipeRefreshLayout.setRefreshing(false);
+                        Toast.makeText(MainActivity.this, R.string.update_error, Toast.LENGTH_SHORT).show();
                     }
                 });
     }
@@ -146,7 +166,7 @@ public class MainActivity extends CheckPermissionsActivity {
             predictionList.clear();
             Yesterday yesterday = baseEntity.getYesterday();
             Map<String, Object> map1 = new HashMap<>();
-            map1.put("day", "昨天");
+            map1.put("day", getString(R.string.yesterday));
             map1.put("temp", yesterday.getDate_1().substring(yesterday.getDate_1().length() - 3, yesterday.getDate_1().length()));
             Day_1 day_1 = yesterday.getDay_1();
             map1.put("dayTypeImg", switchPic(day_1.getType_1()));
@@ -199,17 +219,17 @@ public class MainActivity extends CheckPermissionsActivity {
                         break;
                     case "舒适度":
                         map.put("icon", R.mipmap.zs_ic_shushi);
-                        map.put("tip", zhishu.getValue());
+                        map.put("tip", "感觉"+zhishu.getValue());
                         lifeList.add(map);
                         break;
                     case "紫外线强度":
                         map.put("icon", R.mipmap.zs_ic_ziwaixian);
-                        map.put("tip", zhishu.getValue());
+                        map.put("tip", "紫外线"+zhishu.getValue());
                         lifeList.add(map);
                         break;
                     case "洗车指数":
                         map.put("icon", R.mipmap.zs_ic_xiche);
-                        map.put("tip", zhishu.getValue());
+                        map.put("tip", zhishu.getValue()+"洗车");
                         lifeList.add(map);
                         break;
                     case "穿衣指数":
@@ -224,12 +244,12 @@ public class MainActivity extends CheckPermissionsActivity {
                         break;
                     case "旅游指数":
                         map.put("icon", R.mipmap.zs_ic_lvyou);
-                        map.put("tip", zhishu.getValue());
+                        map.put("tip", zhishu.getValue()+"旅游");
                         lifeList.add(map);
                         break;
                     case "晾晒指数":
                         map.put("icon", R.mipmap.zs_ic_liangshai);
-                        map.put("tip", zhishu.getValue());
+                        map.put("tip", zhishu.getValue()+"晾晒");
                         lifeList.add(map);
                         break;
                     case "雨伞指数":
@@ -283,6 +303,15 @@ public class MainActivity extends CheckPermissionsActivity {
     }
 
     private void initViewEvent() {
+        tvPlace.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, SearchActivity.class);
+                intent.putExtra("location", location);
+                startActivityForResult(intent, 1);
+            }
+        });
+
         predictionList = new ArrayList<>();
         lifeList = new ArrayList<>();
         predictionAdapter = new SimpleAdapter(this, predictionList, R.layout.prediction_gv_item,
@@ -299,12 +328,20 @@ public class MainActivity extends CheckPermissionsActivity {
         swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
-                loadData();
+                if (location.equals("--") || location.equals(""))
+                    getLocation();
+                else if (tvPlace.getText().toString().equals(location)){
+                    loadData(location);
+                }else{
+                    loadData(tvPlace.getText().toString());
+                }
+
             }
         });
     }
 
     private void initView() {
+        iv_location = (ImageView) findViewById(R.id.iv_location);
         swipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipeRefreshLayout);
         tvPlace = (TextView) findViewById(R.id.tv_place);
         tvUpdateTime = (TextView) findViewById(R.id.today_tv_updatetime);
@@ -319,5 +356,31 @@ public class MainActivity extends CheckPermissionsActivity {
 
         gvPrediction = (MyGridView) findViewById(R.id.prediction_grilview);
         gvLifeTip = (MyGridView) findViewById(R.id.life_grilview);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        switch (requestCode) {
+            case 1:
+                if (resultCode == RESULT_OK) {
+                    String res = data.getStringExtra("city");
+                    predictionList.clear();
+                    lifeList.clear();
+                    predictionAdapter.notifyDataSetChanged();
+                    lifeAdapter.notifyDataSetChanged();
+                    if (res.equals(location))
+                        iv_location.setVisibility(View.VISIBLE);
+                    else
+                        iv_location.setVisibility(View.GONE);
+                    if (res.equals("--"))
+                        getLocation();
+                    else {
+                        loadData(res);
+                    }
+                }
+                break;
+            default:
+                break;
+        }
     }
 }
