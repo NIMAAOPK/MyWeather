@@ -1,3 +1,12 @@
 <resources>
-    <string name="app_name">MyWeather</string>
+    <string name="app_name">云翻译</string>
+    <string name="setting">设置</string>
+    <string name="cancel">取消</string>
+    <string name="notifyTitle">警告信息</string>
+    <string name="notifyMsg">权限被拒绝，应用将无法使用</string>
+    <string name="select_city">选择城市</string>
+    <string name="edt_hint"> 请输入城市名称(仅支持市级)</string>
+    <string name="update_fail">更新失败</string>
+    <string name="update_error">不好了，出错了</string>
+    <string name="yesterday">昨天</string>
 </resources>
